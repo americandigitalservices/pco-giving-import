@@ -1,35 +1,25 @@
-# f1-to-pco-giving
-Script that can be used to move FellowshipOne giving records (or any CSV really, with some data manipulation) to Planning Center Giving
+# pushpay-to-pco-giving
+PHP code to migrate exported PushPay giving records into to Planning Center Giving (PCO Giving)
 
 # Languages
-Can be run using PHP 5 or 7 from the command line. I use it on a Mac in a Bash shell, but have been told it also works using the standard command prompt on Windows 10
+Requires PHP 7.0+ and will soon require cURL.
+Works on Linux, Windows, and Mac via CLI or using a web server.
 
 # Authentication 
 The script uses a personal access token, which can be found from your Planning Center Online account (api.planningcenteronline.com). Paste these values into the fields at the top of the script
 
-# Input Files
-You will need the script (giving.php), a CSV export of your giving records (donations.csv), and a CSV list of the people in your Planning Center People database, which can be exported from the web interface (people.csv). See the sample headers of donations.csv and people.csv in this repository, and match your CSV to these columns or adjust the script to point to the right columns in your files. 
+# Preparation
+Create a Payment Source in PCO Giving to receive the transactions - then update the value for G_PAYMENT_SOURCE_ID in the script.
+Create a fund in PCO Giving to receive the transactions - then update the array values for $funds_index in the script.
+Add one field in a custom tab in PCO for individial ID and update the value for P_TAB_FIELD_ID in the script.
+Import the people csv into PCO People directly (working on a people import feature) and verify that your tab field has been populated.
+Locate the files in one folder that php can run from.
 
 # Matching Donations to People 
-This is the most difficult part to think through. Naturally, PCO and F1 (and any other database provider) will have their own set of IDs for the people in your databse, and they won't match. You could write some code to try and match names or any other values exactly, but there will likely be exceptions or errors with this method, particularly for larger churches (our primary database has about 4,500 people records). 
-
-Instead, what we chose to do is add two fields in a custom tab in PCO - one for FellowshipOne individial ID, and one for their household ID. We imported these values when we first imported our people records to Planning Center People. 
-
-The giving export CSV from FellowshipOne will have a field for contributor ID - this is the individial's ID if the contribution was credited to a specifc person, or the household ID if it was credited to a household. 
-
-Planning Center Giving does not allow for contributions to be credited to a househould (for very valid reasons). So the script first searches the column of individual F1 IDs (from people.csv) for an exact match, and if it finds one - it just posts it to that person's record. If an exact match is not found, it then searches the household ID column and credits the donation to the first match it finds. It is using a simple sequential search, so I would suggest sorting your people.csv file to account for this. We sorted from top to bottom in this order - adult male, adult female, male child, female child.
-
-# Funds 
-Enter the fund IDs you will need where you see the sample ones in the script. These values can easily be found using Planning Center's API explorer 
-
-# Payment Sources
-We used a single payment source for all donations (called F1 import). Create one and find its ID (can also be found using the API explorer), and paste that value into each request object at the bottom of the script in the appropriate field. (Ours is 525 if you'd like to search for it)
-
-# Batches 
- The script is posting a month of transactions to each batch. When it reaches the end of that month, it is creating a new batch with the month (January 2016 for example) and then posting the donations to that batch. 
+We automatically create a relational array from PCO people that includes the individial ID you imported (G_PERSON_ID in the giving csv) and match the users automatically.
 
 # Running the import 
-I have been running our imports a month at a time. The script prints a new line with the request object for each donation it posts, and it prints out an error message followed by the request object that errored out if it encounters an error. I typically redirect the output to a text file for review later, using the command:
+We suggest breaking this up into reasonable batches - we pulled in about 5000 in a batch that takes about 15 to 20 minutes to run.
 
 php giving.php > this_month.txt
 
